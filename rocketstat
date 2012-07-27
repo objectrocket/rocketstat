@@ -1,0 +1,127 @@
+#!/usr/bin/python
+#
+# script to probe mongodb and get stats and report them on the command line like iostat
+# 2010 Kenny Gorman
+# v.04b
+# requires: pymongo
+#
+
+import datetime, os, time, sys, random
+import pymongo
+from pymongo import Connection
+from optparse import OptionParser
+import commands
+import signal
+import json
+import urllib
+import urllib2
+from urlparse import urlparse
+
+class MongoStat:
+    
+    def __init__(self):
+
+        # get command line input
+        parser = OptionParser()
+        parser.set_defaults(hostname="api.objectrocket.com",port=80)
+        parser.add_option("--hostname", dest="hostname",help="hostname to connect to")
+        parser.add_option("--port",dest="port",type=int,help="port to connect to")
+        parser.add_option("--api_key",dest="api_key")
+        (options, args) = parser.parse_args()
+
+        self.hostname = options.hostname
+        self.port = options.port
+        self.api_key = options.api_key
+       
+        self.setSignalHandler()
+        self.printStats()
+
+    def thetime(self):
+      return datetime.datetime.now().strftime("%d-%m-%Y.%H:%M:%S")
+
+    def setSignalHandler(self):
+        def handler(signal, frame):
+            print "Goodbye!"
+            sys.exit()
+
+        signal.signal(signal.SIGINT, handler)
+
+    def printStats(self):
+        
+        data = []
+        sleep = 10
+        q = 0
+        i = 0
+        u = 0
+        d = 0
+        ii = 0
+        con = 0
+        lok = 0
+        hostname = self.hostname
+        idx_b_a = 0
+        idx_b_h = 0
+        idx_b_m = 0
+
+        # just run forever until ctrl-c
+        while True:
+            
+            # set previous values before overwriting
+            pq = q
+            pi = i
+            pu = u
+            pd = d
+            pidx_b_a = idx_b_a
+            pidx_b_h = idx_b_h
+            pidx_b_m = idx_b_m
+            
+            api_key = urllib.urlencode({'api_key': self.api_key})
+            url = "http://%s:%s/serverStatus" % ( self.hostname, self.port )
+            data = json.loads(urllib2.urlopen(url, api_key).read())["data"]
+
+            instance = data["instance"]
+            lok = round(float(data['globalLock']['ratio']),2)
+            res = int(data['mem']['resident'])
+            vir = int(data['mem']['virtual'])
+            mapd = int(data['mem']['mapped'])
+
+            template="%12s%22s%12s%12s%12s%12s"
+            header=('hostname', 'time', 'lock ratio', 'resident','virtual', 'mapped')
+            datastr="hostname, self.thetime(), lok, res, vir, mapd"
+
+            if "opcounters" in data:
+                q = int(data['opcounters']['query'])
+                i = int(data['opcounters']['insert'])
+                u = int(data['opcounters']['update'])
+                d = int(data['opcounters']['delete'])
+                con = int(data['connections']['current'])
+              
+                template="%12s%22s%12s%12s%12s%12s%12s%12s%12s%12s%12s"
+                header=('instance', 'time', 'query', 'insert', 'update',  \
+                        'delete', 'active con', 'lock ratio', 'resident', \
+                        'virtual','mapped')
+                datastr="instance, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, con, lok, res, vir, mapd"
+      
+            # opcounters will be in data if indexcounters is
+            if "indexCounters" in data:
+                idx_b_a = int(data['indexCounters']['btree']['accesses'])
+                idx_b_h = int(data['indexCounters']['btree']['hits'])
+                idx_b_m = int(data['indexCounters']['btree']['misses'])
+                idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
+                template="%12s%22s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s"
+                header=('instance', 'time', 'query', 'insert', 'update',  \
+                        'delete', 'active con', 'lock ratio', 'resident', \
+                        'virtual','mapped','idx acc','idx hit','idx miss','idx ratio')
+                datastr="instance, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, \
+                         con, lok, res, vir, mapd, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
+	            
+            if (ii % 25 == 0):
+	            print template % header
+            print template % (eval(datastr))
+           
+            ii += 1
+            
+            time.sleep(sleep)
+
+if __name__ == "__main__":
+    MongoStat()
+
