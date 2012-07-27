@@ -57,7 +57,6 @@ class MongoStat:
         ii = 0
         con = 0
         lok = 0
-        hostname = self.hostname
         idx_b_a = 0
         idx_b_h = 0
         idx_b_m = 0
@@ -65,7 +64,7 @@ class MongoStat:
         # just run forever until ctrl-c
         while True:
             
-            # set previous values before overwriting
+            # set previous values before overwriting, only for things that are counters
             pq = q
             pi = i
             pu = u
@@ -79,41 +78,36 @@ class MongoStat:
             data = json.loads(urllib2.urlopen(url, api_key).read())["data"]
 
             instance = data["instance"]
+            plan = data["plan"]
+            zone = data["zone"]
+    
             lok = round(float(data['globalLock']['ratio']),2)
-            res = int(data['mem']['resident'])
-            vir = int(data['mem']['virtual'])
-            mapd = int(data['mem']['mapped'])
+            lkct = data['globalLock']["currentQueue"]['total']
+            lkcr = data['globalLock']["currentQueue"]['readers']
+            lkcw = data['globalLock']["currentQueue"]['writers']
+            lkat = data['globalLock']["activeClients"]['total']
+            lkar = data['globalLock']["activeClients"]['readers']
+            lkaw = data['globalLock']["activeClients"]['writers']
 
-            template="%12s%22s%12s%12s%12s%12s"
-            header=('hostname', 'time', 'lock ratio', 'resident','virtual', 'mapped')
-            datastr="hostname, self.thetime(), lok, res, vir, mapd"
+            q = int(data['opcounters']['query'])
+            i = int(data['opcounters']['insert'])
+            u = int(data['opcounters']['update'])
+            d = int(data['opcounters']['delete'])
+            
+            con = int(data['connections']['current'])
+    
+            idx_b_a = int(data['indexCounters']['btree']['accesses'])
+            idx_b_h = int(data['indexCounters']['btree']['hits'])
+            idx_b_m = int(data['indexCounters']['btree']['misses'])
+            idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
 
-            if "opcounters" in data:
-                q = int(data['opcounters']['query'])
-                i = int(data['opcounters']['insert'])
-                u = int(data['opcounters']['update'])
-                d = int(data['opcounters']['delete'])
-                con = int(data['connections']['current'])
-              
-                template="%12s%22s%12s%12s%12s%12s%12s%12s%12s%12s%12s"
-                header=('instance', 'time', 'query', 'insert', 'update',  \
-                        'delete', 'active con', 'lock ratio', 'resident', \
-                        'virtual','mapped')
-                datastr="instance, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, con, lok, res, vir, mapd"
-      
-            # opcounters will be in data if indexcounters is
-            if "indexCounters" in data:
-                idx_b_a = int(data['indexCounters']['btree']['accesses'])
-                idx_b_h = int(data['indexCounters']['btree']['hits'])
-                idx_b_m = int(data['indexCounters']['btree']['misses'])
-                idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
-                template="%12s%22s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s%12s"
-                header=('instance', 'time', 'query', 'insert', 'update',  \
-                        'delete', 'active con', 'lock ratio', 'resident', \
-                        'virtual','mapped','idx acc','idx hit','idx miss','idx ratio')
-                datastr="instance, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, \
-                         con, lok, res, vir, mapd, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
-	            
+            template="%10s%10s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
+            header=('instance', 'plan', 'zone', 'time', 'query', 'insert', 'update',  \
+                    'delete', 'aconn', 'lock%', 'queued', \
+                    'active','idxacc','idxhit','idxmiss','idx%')
+            datastr="instance, plan, zone, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, \
+                     con, lok, lkct, lkat, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
+            
             if (ii % 25 == 0):
 	            print template % header
             print template % (eval(datastr))
