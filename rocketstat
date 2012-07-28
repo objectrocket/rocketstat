@@ -1,10 +1,5 @@
 #!/usr/bin/python
 #
-# script to probe mongodb and get stats and report them on the command line like iostat
-# 2010 Kenny Gorman
-# v.04b
-# requires: pymongo
-#
 
 import datetime, os, time, sys, random
 import pymongo
