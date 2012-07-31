@@ -1,4 +1,4 @@
-Rocketstat is essentially a copy of the origional 'mongostat' utility written by Kenny Gorman, however it's designed to utilize the ObjectRocket public API as a data source.  The functionality should roughly mirror the 10gen utility called 'mongostat'
+Rocketstat is essentially a copy of the <a href=https://github.com/kgorman/mongostat>original</a> 'mongostat' utility written by Kenny Gorman in 2010, however it's designed to utilize the ObjectRocket public API as a data source.  The functionality should roughly mirror the 10gen utility called 'mongostat' where it makes sense.  Some stats don't translate to the ObjectRocket cloud service and thus are omitted.  A guideline of the values reported can be found in the <a href=http://docs.mongodb.org/manual/reference/mongostat/>10gen docs</a>.
 
 Requires: python, pymongo
 
