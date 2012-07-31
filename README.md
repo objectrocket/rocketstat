@@ -4,6 +4,10 @@ Rocketstat is essentially a copy of the <a href=https://github.com/kgorman/mongo
 Requires: python, pymongo
 
 <h2>Usage</h2>
+<p>
+	In order to use rocketstat you will need an ObjectRocket API Key.  You will need to signup for a <a href=http://www.objectrocket.com>Objectrocket account</a>, create an instance, then select the API tab under your instance.  Copy/Paste the API key to the command line below.
+<p>
+	Rocketstat reports aggregate stats across your entire instance.  That means that your data is summated across all the shards.  You are seeing total overall statistics about your MongoDB instance on ObjectRocket.
 <pre>
 Usage: rocketstat [options]
 
@@ -14,7 +18,7 @@ Options:
   --api_key=API_KEY    ObjectRocket API key.  See www.objectrocket.com for an account
 
 
-$>python rocketstat --api_key=foo
+$>python rocketstat --api_key=<your api key>
 </pre>
 
 <h2>License</h2>
