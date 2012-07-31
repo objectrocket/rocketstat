@@ -18,7 +18,10 @@ Options:
   --api_key=API_KEY    ObjectRocket API key.  See www.objectrocket.com for an account
 
 
-$>python rocketstat --api_key=<your api key>
+$>python rocketstat --api_key=your_api_key
+  instance                  time     query    insert    update    delete     aconn     lock%    queued    active    idxacc    idxhit   idxmiss      idx%
+test	     31-07-2012.09:35:20     35684        96     74488         0       372       0.0         0         2         0         0         0       0.0
+test         31-07-2012.09:35:30         1         0         3         0       372       0.0         0         2         0         0         0       0.0
 </pre>
 
 <h2>License</h2>
