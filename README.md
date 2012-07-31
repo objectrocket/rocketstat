@@ -13,8 +13,8 @@ Usage: rocketstat [options]
 
 Options:
   -h, --help           show this help message and exit
-  --hostname=HOSTNAME  hostname to connect to
-  --port=PORT          port to connect to
+  --hostname=HOSTNAME  hostname to connect to (optional, uses default ObjectRocket hostname otherwise)
+  --port=PORT          port to connect to (optional, uses default ObjectRocket port otherwise)
   --api_key=API_KEY    ObjectRocket API key.  See www.objectrocket.com for an account
 
 
