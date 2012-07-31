@@ -1,10 +1,5 @@
 #!/usr/bin/python
 #
-# script to probe mongodb and get stats and report them on the command line like iostat
-# 2010 Kenny Gorman
-# v.04b
-# requires: pymongo
-#
 
 import datetime, os, time, sys, random
 import pymongo
@@ -26,7 +21,7 @@ class MongoStat:
         parser.set_defaults(hostname="api.objectrocket.com",port=80)
         parser.add_option("--hostname", dest="hostname",help="hostname to connect to")
         parser.add_option("--port",dest="port",type=int,help="port to connect to")
-        parser.add_option("--api_key",dest="api_key")
+        parser.add_option("--api_key",dest="api_key",help="ObjectRocket API key.  See www.objectrocket.com for an account")
         (options, args) = parser.parse_args()
 
         self.hostname = options.hostname
