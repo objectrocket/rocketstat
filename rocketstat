@@ -73,7 +73,6 @@ class MongoStat:
             data = json.loads(urllib2.urlopen(url, api_key).read())["data"]
 
             instance = data["instance"]
-            plan = data["plan"]
             zone = data["zone"]
     
             lok = round(float(data['globalLock']['ratio']),2)
@@ -96,12 +95,12 @@ class MongoStat:
             idx_b_m = int(data['indexCounters']['btree']['misses'])
             idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
 
-            template="%10s%10s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
-            header=('instance', 'plan', 'zone', 'time', 'query', 'insert', 'update',  \
+            template="%10s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
+            header=('instance', 'zone', 'time', 'query', 'insert', 'update',  \
                     'delete', 'aconn', 'lock%', 'queued', \
                     'active','idxacc','idxhit','idxmiss','idx%')
-            datastr="instance, plan, zone, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, \
-                     con, lok, lkct, lkat, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
+            datastr="instance, zone, self.thetime(), (q-pq), (i-pi),(u-pu), (d-pd), \
+                     con, lok, lkct, lkat, (idx_b_a-pidx_b_a), (idx_b_h-pidx_b_h), (idx_b_m-pidx_b_m), idx_b_o"
             
             if (ii % 25 == 0):
 	            print template % header
