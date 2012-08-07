@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 
-import datetime, os, time, sys, random
+import datetime, os, time, sys
 import pymongo
 from pymongo import Connection
 from optparse import OptionParser
@@ -12,7 +12,7 @@ import urllib
 import urllib2
 from urlparse import urlparse
 
-class MongoStat:
+class RocketStat:
     
     def __init__(self):
 
@@ -44,7 +44,7 @@ class MongoStat:
     def printStats(self):
         
         data = []
-        sleep = 10
+        sleep = 1
         q = 0
         i = 0
         u = 0
@@ -99,8 +99,8 @@ class MongoStat:
             header=('instance', 'zone', 'time', 'query', 'insert', 'update',  \
                     'delete', 'aconn', 'lock%', 'queued', \
                     'active','idxacc','idxhit','idxmiss','idx%')
-            datastr="instance, zone, self.thetime(), (q-pq), (i-pi),(u-pu), (d-pd), \
-                     con, lok, lkct, lkat, (idx_b_a-pidx_b_a), (idx_b_h-pidx_b_h), (idx_b_m-pidx_b_m), idx_b_o"
+            datastr="instance, zone, self.thetime(), (q-pq)/sleep, (i-pi)/sleep,(u-pu)/sleep, (d-pd)/sleep, \
+                     con, lok, lkct, lkat, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
             
             if (ii % 25 == 0):
 	            print template % header
@@ -111,5 +111,5 @@ class MongoStat:
             time.sleep(sleep)
 
 if __name__ == "__main__":
-    MongoStat()
+    RocketStat()
 
