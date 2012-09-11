@@ -75,7 +75,12 @@ class RocketStat:
             instance = data["instance"]
             zone = data["zone"]
     
-            lok = round(float(data['globalLock']['ratio']),2)
+            if data['version'] == "2.2.0":
+                ## should convert this to using new style 'locks' output
+                lok = round(float((data['globalLock']['lockTime'] / data['globalLock']['totalTime'])*100),2)
+            else:
+                lok = round(float(data['globalLock']['ratio']),2)
+
             lkct = data['globalLock']["currentQueue"]['total']
             lkcr = data['globalLock']["currentQueue"]['readers']
             lkcw = data['globalLock']["currentQueue"]['writers']
@@ -95,7 +100,7 @@ class RocketStat:
             idx_b_m = int(data['indexCounters']['btree']['misses'])
             idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
 
-            template="%10s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
+            template="%25s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
             header=('instance', 'zone', 'time', 'query', 'insert', 'update',  \
                     'delete', 'aconn', 'lock%', 'queued', \
                     'active','idxacc','idxhit','idxmiss','idx%')
