@@ -75,10 +75,12 @@ class RocketStat:
             instance = data["instance"]
             zone = data["zone"]
     
-            if data['version'] == "2.2.0":
+            ## fix silly versioning bug
+            if not str(data['version']).startswith("2.0"):
                 ## should convert this to using new style 'locks' output
                 lok = round(float((data['globalLock']['lockTime'] / data['globalLock']['totalTime'])*100),2)
             else:
+                ## if we're here, assume we're 2.0
                 lok = round(float(data['globalLock']['ratio']),2)
 
             lkct = data['globalLock']["currentQueue"]['total']
