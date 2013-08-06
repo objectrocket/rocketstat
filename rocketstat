@@ -34,6 +34,10 @@ class RocketStat:
     def thetime(self):
       return datetime.datetime.now().strftime("%d-%m-%Y.%H:%M:%S")
 
+    def get_version(self, version_string):
+        _version_list = version_string.split(".")
+        return float(".".join([_version_list[0], _version_list[1]]))
+
     def setSignalHandler(self):
         def handler(signal, frame):
             print "Goodbye!"
@@ -42,7 +46,6 @@ class RocketStat:
         signal.signal(signal.SIGINT, handler)
 
     def printStats(self):
-        
         data = []
         sleep = 1
         q = 0
@@ -58,7 +61,6 @@ class RocketStat:
 
         # just run forever until ctrl-c
         while True:
-            
             # set previous values before overwriting, only for things that are counters
             pq = q
             pi = i
@@ -75,6 +77,8 @@ class RocketStat:
             instance = data["instance"]
             zone = data["zone"]
     
+            version = self.get_version(data["version"])
+
             ## fix silly versioning bug
             if not str(data['version']).startswith("2.0"):
                 ## should convert this to using new style 'locks' output
@@ -97,10 +101,17 @@ class RocketStat:
             
             con = int(data['connections']['current'])
     
-            idx_b_a = int(data['indexCounters']['btree']['accesses'])
-            idx_b_h = int(data['indexCounters']['btree']['hits'])
-            idx_b_m = int(data['indexCounters']['btree']['misses'])
-            idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
+            ## indexCounter changes in serverStatus for 2.4
+            if version >= 2.4:
+                idx_b_a = int(data['indexCounters']['accesses'])
+                idx_b_h = int(data['indexCounters']['hits'])
+                idx_b_m = int(data['indexCounters']['misses'])
+                idx_b_o = round(float(data['indexCounters']['missRatio']),2)
+            else:
+                idx_b_a = int(data['indexCounters']['btree']['accesses'])
+                idx_b_h = int(data['indexCounters']['btree']['hits'])
+                idx_b_m = int(data['indexCounters']['btree']['misses'])
+                idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
 
             template="%25s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
             header=('instance', 'zone', 'time', 'query', 'insert', 'update',  \
@@ -110,8 +121,10 @@ class RocketStat:
                      con, lok, lkct, lkat, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
             
             if (ii % 25 == 0):
-	            print template % header
-            print template % (eval(datastr))
+                    print template % header
+
+            if ii != 0:
+                print template % (eval(datastr))
            
             ii += 1
             
@@ -119,4 +132,3 @@ class RocketStat:
 
 if __name__ == "__main__":
     RocketStat()
-
