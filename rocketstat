@@ -93,7 +93,7 @@ class RocketStat:
             lkaw = data['globalLock']["activeClients"]['writers']
             
             ## fix silly versioning bug
-            if data['version'] >= 2.0:
+            if data['version'] >= 2.2:
                 lok = round(float((float(data['globalLock']['lockTime']) / float(data['globalLock']['totalTime']))*100),2)
             else:
                 ## if we're here, assume we're 2.0
