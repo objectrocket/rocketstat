@@ -23,6 +23,10 @@ class RocketStat:
         parser.add_option("--port",dest="port",type=int,help="port to connect to")
         parser.add_option("--api_key",dest="api_key",help="ObjectRocket API key.  See www.objectrocket.com for an account")
         (options, args) = parser.parse_args()
+	
+	if not args or options:
+	    parser.print_help()	
+	    exit()
 
         self.hostname = options.hostname
         self.port = options.port
