@@ -1,39 +1,23 @@
-#!/usr/bin/python
-#
+#!/usr/bin/env python
 
-import datetime, os, time, sys
-import pymongo
-from pymongo import Connection
-from optparse import OptionParser
-import commands
-import signal
+import argparse
+import datetime
 import json
+import signal
+import sys
+import time
 import urllib
 import urllib2
-from urlparse import urlparse
+
+
 
 class RocketStat:
+    """RocketStat Utility Class"""
     
-    def __init__(self):
+    def __init__(self, api_key, api_server):
 
-        # get command line input
-        parser = OptionParser()
-        parser.set_defaults(hostname="api.objectrocket.com",port=80)
-        parser.add_option("--hostname", dest="hostname",help="hostname to connect to")
-        parser.add_option("--port",dest="port",type=int,help="port to connect to")
-        parser.add_option("--api_key",dest="api_key",help="ObjectRocket API key.  See www.objectrocket.com for an account")
-        (options, args) = parser.parse_args()
-
-        if not options:
-            parser.print_help()
-            exit()
-
-        self.hostname = options.hostname
-        self.port = options.port
-        self.api_key = options.api_key
-       
-        self.setSignalHandler()
-        self.printStats()
+        self.api_key = api_key
+        self.api_server = api_server
 
     def thetime(self):
       return datetime.datetime.now().strftime("%d-%m-%Y.%H:%M:%S")
@@ -42,94 +26,135 @@ class RocketStat:
         _version_list = version_string.split(".")
         return float(".".join([_version_list[0], _version_list[1]]))
 
-    def setSignalHandler(self):
-        def handler(signal, frame):
-            print "Goodbye!"
-            sys.exit()
-
-        signal.signal(signal.SIGINT, handler)
-
     def printStats(self):
         data = []
         sleep = 1
-        q = 0
-        i = 0
-        u = 0
-        d = 0
-        ii = 0
-        con = 0
-        lok = 0
-        idx_b_a = 0
-        idx_b_h = 0
-        idx_b_m = 0
+        queries = 0
+        inserts = 0
+        updates = 0
+        deletes = 0
+        counter = 0
+        connections = 0
+        lock_percent = 0
+        index_accesses = 0
+        index_hits = 0
+        index_misses = 0
 
         # just run forever until ctrl-c
         while True:
             # set previous values before overwriting, only for things that are counters
-            pq = q
-            pi = i
-            pu = u
-            pd = d
-            pidx_b_a = idx_b_a
-            pidx_b_h = idx_b_h
-            pidx_b_m = idx_b_m
+            prior_queries = queries
+            prior_inserts = inserts
+            prior_updates = updates
+            prior_deletes = deletes
+            prior_index_accesses = index_accesses
+            prior_index_hits = index_hits
+            prior_index_misses = index_misses
             
             api_key = urllib.urlencode({'api_key': self.api_key})
-            url = "http://%s:%s/serverStatus" % ( self.hostname, self.port )
-            data = json.loads(urllib2.urlopen(url, api_key).read())["data"]
+            url = "https://{}/serverStatus".format(self.api_server)
+            data = json.loads(urllib2.urlopen(url, api_key).read())['data']
 
             instance = data["instance"]
             zone = data["zone"]
             version = self.get_version(data["version"])
 
-            q = int(data['opcounters']['query'])
-            i = int(data['opcounters']['insert'])
-            u = int(data['opcounters']['update'])
-            d = int(data['opcounters']['delete'])
+            queries = int(data['opcounters']['query'])
+            inserts = int(data['opcounters']['insert'])
+            updates = int(data['opcounters']['update'])
+            deletes = int(data['opcounters']['delete'])
             
-            con = int(data['connections']['current'])
+            connections = int(data['connections']['current'])
 
-            lkct = data['globalLock']["currentQueue"]['total']
-            lkcr = data['globalLock']["currentQueue"]['readers']
-            lkcw = data['globalLock']["currentQueue"]['writers']
-            lkat = data['globalLock']["activeClients"]['total']
-            lkar = data['globalLock']["activeClients"]['readers']
-            lkaw = data['globalLock']["activeClients"]['writers']
+            lock_total = data['globalLock']['currentQueue']['total']
+            lock_readers = data['globalLock']['currentQueue']['readers']
+            lock_writers = data['globalLock']['currentQueue']['writers']
+            lock_active_total = data['globalLock']['activeClients']['total']
+            lock_active_readers = data['globalLock']['activeClients']['readers']
+            lock_active_writers = data['globalLock']['activeClients']['writers']
             
             ## fix silly versioning bug
             if data['version'] >= 2.2:
-                lok = round(float((float(data['globalLock']['lockTime']) / float(data['globalLock']['totalTime']))*100),2)
+                lock_percent = round(float((float(data['globalLock']['lockTime']) / float(data['globalLock']['totalTime']))*100),2)
             else:
                 ## if we're here, assume we're 2.0
-                lok = round(float(data['globalLock']['ratio']),2)
+                lock_percent = round(float(data['globalLock']['ratio']),2)
           
             if version >= 2.4:
-                idx_b_a = int(data['indexCounters']['accesses'])
-                idx_b_h = int(data['indexCounters']['hits'])
-                idx_b_m = int(data['indexCounters']['misses'])
-                idx_b_o = round(float(data['indexCounters']['missRatio']),2)
+                index_accesses = int(data['indexCounters']['accesses'])
+                index_hits = int(data['indexCounters']['hits'])
+                index_misses = int(data['indexCounters']['misses'])
+                index_miss_percent = round(float(data['indexCounters']['missRatio']),2)
             else:
-                idx_b_a = int(data['indexCounters']['btree']['accesses'])
-                idx_b_h = int(data['indexCounters']['btree']['hits'])
-                idx_b_m = int(data['indexCounters']['btree']['misses'])
-                idx_b_o = round(float(data['indexCounters']['btree']['missRatio']),2)
+                index_accesses = int(data['indexCounters']['btree']['accesses'])
+                index_hits = int(data['indexCounters']['btree']['hits'])
+                index_misses = int(data['indexCounters']['btree']['misses'])
+                index_miss_percent = round(float(data['indexCounters']['btree']['missRatio']),2)
 
-            template="%25s%10s%22s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s"
-            header=('instance', 'zone', 'time', 'query', 'insert', 'update',  \
-                    'delete', 'aconn', 'lock%', 'queued', \
-                    'active','idxacc','idxhit','idxmiss','idx%')
-            datastr="instance, zone, self.thetime(), (q-pq)/sleep, (i-pi)/sleep, (u-pu)/sleep, (d-pd)/sleep, \
-                     con, lok, lkct, lkat, (idx_b_a-pidx_b_a)/sleep, (idx_b_h-pidx_b_h)/sleep, (idx_b_m-pidx_b_m)/sleep, idx_b_o"
-            
-            if (ii % 25 == 0):
-                    print template % header
+            template = """{:>25}{:>10}{:>22}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}"""
 
-            if ii != 0:
-                print template % (eval(datastr))
-           
-            ii += 1
-            
+            if (counter % 25 == 0):
+                    print template.format('instance',
+                                          'zone',
+                                          'time',
+                                          'query',
+                                          'insert',
+                                          'update',
+                                          'delete',
+                                          'aconn',
+                                          'lock%',
+                                          'queued',
+                                          'active',
+                                          'idxacc',
+                                          'idxhit',
+                                          'idxmiss',
+                                          'idx%')
+
+            if counter != 0:
+                print template.format(instance,
+                                      zone,
+                                      self.thetime(),
+                                      (queries-prior_queries)/sleep,
+                                      (inserts-prior_inserts)/sleep,
+                                      (updates-prior_updates)/sleep,
+                                      (deletes-prior_deletes)/sleep,
+                                      connections,
+                                      lock_percent,
+                                      lock_total,
+                                      lock_active_total,
+                                      (index_accesses-prior_index_accesses)/sleep,
+                                      (index_hits-prior_index_hits)/sleep,
+                                      (index_misses-prior_index_misses)/sleep,
+                                      index_miss_percent)
+
+            counter += 1
             time.sleep(sleep)
 
+
+def main():
+    # get command line input
+    parser = argparse.ArgumentParser(description='ObjectRocket stat utility. See www.objectrocket.com for an account.')
+
+    parser.add_argument('-a',
+                        '--api_key',
+                        dest='api_key',
+                        required=True,
+                        help='ObjectRocket API key.')
+
+    parser.add_argument('-H',
+                        '--hostname',
+                        dest='api_server',
+                        default='api.objectrocket.com',
+                        metavar='HOSTNAME',
+                        help='hostname to connect to.')
+
+    args = parser.parse_args()
+
+    signal.signal(signal.SIGINT, lambda signum, frame: sys.exit())
+
+    rocketstat = RocketStat(args.api_key, args.api_server)
+    rocketstat.printStats()
+
+
 if __name__ == "__main__":
-    RocketStat()
+    main()
