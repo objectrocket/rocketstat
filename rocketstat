@@ -155,7 +155,7 @@ def main():
                         type=int,
                         choices=(1, 5, 10, 15, 30, 60),
                         metavar='CHECKINTERVAL',
-                        help='host often to poll for data')
+                        help='how often to poll for data')
 
     args = parser.parse_args()
 
