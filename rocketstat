@@ -14,10 +14,11 @@ import urllib2
 class RocketStat:
     """RocketStat Utility Class"""
     
-    def __init__(self, api_key, api_server):
+    def __init__(self, api_key, api_server, check_interval):
 
         self.api_key = api_key
         self.api_server = api_server
+        self.sleep_interval = check_interval
 
     def thetime(self):
       return datetime.datetime.now().strftime("%d-%m-%Y.%H:%M:%S")
@@ -28,7 +29,6 @@ class RocketStat:
 
     def printStats(self):
         data = []
-        sleep = 1
         queries = 0
         inserts = 0
         updates = 0
@@ -128,7 +128,7 @@ class RocketStat:
                                       index_miss_percent)
 
             counter += 1
-            time.sleep(sleep)
+            time.sleep(self.sleep_interval)
 
 
 def main():
@@ -148,11 +148,19 @@ def main():
                         metavar='HOSTNAME',
                         help='hostname to connect to.')
 
+    parser.add_argument('-C',
+                        '--check-interval',
+                        dest='check_interval',
+                        default='1',
+                        type=int,
+                        choices=(1, 5, 10, 15, 30, 60),
+                        metavar='CHECKINTERVAL',
+                        help='how often to poll for data')
+
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, lambda signum, frame: sys.exit())
-
-    rocketstat = RocketStat(args.api_key, args.api_server)
+    rocketstat = RocketStat(args.api_key, args.api_server,args.check_interval)
     rocketstat.printStats()
 
 
