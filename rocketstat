@@ -19,9 +19,14 @@ class RocketStat:
         self.api_key = api_key
         self.api_server = api_server
         self.sleep_interval = check_interval
+        
+    def printAPIError(self, errmsg):
+        print '\nThe API couldn\'t fulfill the request.'
+        print 'Error code: ', errmsg
+        sys.exit(1)
 
     def thetime(self):
-      return datetime.datetime.now().strftime("%d-%m-%Y.%H:%M:%S")
+        return datetime.datetime.now().strftime("%d-%m-%Y.%H:%M:%S")
 
     def get_version(self, version_string):
         _version_list = version_string.split(".")
@@ -53,8 +58,32 @@ class RocketStat:
             
             api_key = urllib.urlencode({'api_key': self.api_key})
             url = "https://{}/serverStatus".format(self.api_server)
-            data = json.loads(urllib2.urlopen(url, api_key).read())['data']
-
+            user_agent = "Rocketstat/1.0"
+            headers = {'User-Agent': user_agent}
+            request = urllib2.Request(url, api_key, headers)
+            # Handle urllib2 errors (wrong URL, unable to connect, etc)
+            try: 
+                response = urllib2.urlopen(request)
+            except urllib2.URLError as e:
+                if hasattr(e, 'reason'):
+                    self.printAPIError('Unable to reach ObjectRocket API')
+                elif hasattr(e, 'code'):
+                    self.printAPIError(e.code)
+                else:
+                    self.printAPIError('Unknown connection error')
+            # Handle API response errors (API error or malformed response)
+            try:
+                resp_json = json.loads(response.read())
+            except ValueError, e:
+                self.printAPIError(e)
+ 
+            if 'rc' in resp_json.keys() and resp_json['rc'] == 1:
+                self.printAPIError(resp_json['data'])
+            else:
+                data = resp_json['data']
+                if not isinstance(data, dict) or 'instance' not in data.keys():
+                    self.printAPIError('Malformed response')
+                    
             instance = data["instance"]
             zone = data["zone"]
             version = self.get_version(data["version"])
