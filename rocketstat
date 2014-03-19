@@ -21,7 +21,7 @@ class RocketStat:
         self.sleep_interval = check_interval
         
     def printAPIError(self, errmsg):
-        print '\nThe API couldn\'t fulfill the request. Please contact support@objectrocket.com for assistance'
+        print '\nThe API couldn\'t fulfill the request. Please contact \'support@objectrocket.com\' for assistance.'
         print 'Error code: ', errmsg
         sys.exit(1)
 
@@ -72,10 +72,11 @@ class RocketStat:
                 else:
                     self.printAPIError('Unknown connection error')
             # Handle API response errors (API error or malformed response)
+            resp_data = response.read()
             try:
-                resp_json = json.loads(response.read())
-            except ValueError, e:
-                self.printAPIError(e)
+                resp_json = json.loads(resp_data)
+            except ValueError:
+                self.printAPIError(resp_data)
  
             if 'rc' in resp_json.keys() and resp_json['rc'] == 1:
                 self.printAPIError(resp_json['data'])
