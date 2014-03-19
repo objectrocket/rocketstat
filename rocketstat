@@ -21,7 +21,7 @@ class RocketStat:
         self.sleep_interval = check_interval
         
     def printAPIError(self, errmsg):
-        print '\nThe API couldn\'t fulfill the request.'
+        print '\nThe API couldn\'t fulfill the request. Please contact support@objectrocket.com for assistance'
         print 'Error code: ', errmsg
         sys.exit(1)
 
