@@ -10,7 +10,6 @@ import urllib
 import urllib2
 
 
-
 class RocketStat:
     """RocketStat Utility Class"""
     
@@ -44,6 +43,9 @@ class RocketStat:
         index_accesses = 0
         index_hits = 0
         index_misses = 0
+        uptime_millis = 0
+        locktime = 0 
+        memory_misses = 0 
 
         # just run forever until ctrl-c
         while True:
@@ -55,6 +57,9 @@ class RocketStat:
             prior_index_accesses = index_accesses
             prior_index_hits = index_hits
             prior_index_misses = index_misses
+            prior_uptime_millis = uptime_millis
+            prior_locktime = locktime
+            prior_memory_misses = memory_misses
             
             api_key = urllib.urlencode({'api_key': self.api_key})
             url = "https://{}/serverStatus".format(self.api_server)
@@ -105,11 +110,21 @@ class RocketStat:
             
             ## fix silly versioning bug
             if data['version'] >= 2.2:
-                lock_percent = round(float((float(data['globalLock']['lockTime']) / float(data['globalLock']['totalTime']))*100),2)
+                locktime = int(data['globalLock']['lockTime'])
+                uptime_millis = int(data['uptimeMillis'])
+                diff_locktime =  locktime - prior_locktime
+                diff_uptime_millis = uptime_millis - prior_uptime_millis
+                lock_percent = round(float(diff_locktime) / float(diff_uptime_millis) ,1)
             else:
                 ## if we're here, assume we're 2.0
                 lock_percent = round(float(data['globalLock']['ratio']),2)
-          
+            
+            memory_misses = int(0)
+            for db in data['recordStats']:
+                if db not in ['accessesNotInMemory','pageFaultExceptionsThrown']:
+                    memory_misses += int(data['recordStats'][db]['accessesNotInMemory'])
+            diff_memory_misses = (memory_misses - prior_memory_misses )
+
             if version >= 2.4:
                 index_accesses = int(data['indexCounters']['accesses'])
                 index_hits = int(data['indexCounters']['hits'])
@@ -121,7 +136,7 @@ class RocketStat:
                 index_misses = int(data['indexCounters']['btree']['misses'])
                 index_miss_percent = round(float(data['indexCounters']['btree']['missRatio']),2)
 
-            template = """{:>25}{:>10}{:>22}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}"""
+            template = """{:>20}{:>13}{:>22}{:>10}{:>10}{:>10}{:>10}{:>10}{:>12}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}"""
 
             if (counter % 25 == 0):
                     print template.format('instance',
@@ -132,6 +147,7 @@ class RocketStat:
                                           'update',
                                           'delete',
                                           'aconn',
+                                          'cache_miss',
                                           'lock%',
                                           'queued',
                                           'active',
@@ -149,6 +165,7 @@ class RocketStat:
                                       (updates-prior_updates)/self.sleep_interval,
                                       (deletes-prior_deletes)/self.sleep_interval,
                                       connections,
+                                      diff_memory_misses/self.sleep_interval,
                                       lock_percent,
                                       lock_total,
                                       lock_active_total,
