@@ -147,7 +147,7 @@ class RocketStat:
                                           'update',
                                           'delete',
                                           'aconn',
-                                          'cache_miss',
+                                          'accNIMem',
                                           'lock%',
                                           'qr|qw',
                                           'active',
