@@ -13,11 +13,12 @@ import urllib2
 class RocketStat:
     """RocketStat Utility Class"""
     
-    def __init__(self, api_key, api_server, check_interval):
+    def __init__(self, api_key, api_server, check_interval, local_time=False):
 
         self.api_key = api_key
         self.api_server = api_server
         self.sleep_interval = check_interval
+        self.local_time = local_time
         
     def printAPIError(self, errmsg):
         print '\nThe API couldn\'t fulfill the request. Please contact \'support@objectrocket.com\' for assistance.'
@@ -44,8 +45,10 @@ class RocketStat:
         index_hits = 0
         index_misses = 0
         uptime_millis = 0
-        locktime = 0 
-        memory_misses = 0 
+        locktime = 0
+        memory_misses = 0
+        request_start = time.time()
+        request_end = time.time()
 
         # just run forever until ctrl-c
         while True:
@@ -61,13 +64,14 @@ class RocketStat:
             prior_locktime = locktime
             prior_memory_misses = memory_misses
             
+            request_start = request_end
             api_key = urllib.urlencode({'api_key': self.api_key})
             url = "https://{}/serverStatus".format(self.api_server)
             user_agent = "Rocketstat/1.0"
             headers = {'User-Agent': user_agent}
             request = urllib2.Request(url, api_key, headers)
             # Handle urllib2 errors (wrong URL, unable to connect, etc)
-            try: 
+            try:
                 response = urllib2.urlopen(request)
             except urllib2.URLError as e:
                 if hasattr(e, 'reason'):
@@ -89,7 +93,7 @@ class RocketStat:
                 data = resp_json['data']
                 if not isinstance(data, dict) or 'instance' not in data.keys():
                     self.printAPIError('Malformed response')
-                    
+            request_end = time.time()
             instance = data["instance"]
             zone = data["zone"]
             version = self.get_version(data["version"])
@@ -114,10 +118,10 @@ class RocketStat:
                 uptime_millis = int(data['uptimeMillis'])
                 diff_locktime =  locktime - prior_locktime
                 diff_uptime_millis = uptime_millis - prior_uptime_millis
-                lock_percent = round(float(diff_locktime) / float(diff_uptime_millis) ,1)
+                lock_percent = round(float(diff_locktime) / float(diff_uptime_millis), 1)
             else:
                 ## if we're here, assume we're 2.0
-                lock_percent = round(float(data['globalLock']['ratio']),2)
+                lock_percent = round(float(data['globalLock']['ratio']), 2)
             
             memory_misses = int(0)
             for db in data['recordStats']:
@@ -136,6 +140,10 @@ class RocketStat:
                 index_misses = int(data['indexCounters']['btree']['misses'])
                 index_miss_percent = round(float(data['indexCounters']['btree']['missRatio']),2)
 
+            if self.local_time:
+                request_time = int(request_end - request_start) or 1
+            else:
+                request_time = self.sleep_interval
             template = """{:>20}{:>13}{:>22}{:>10}{:>10}{:>10}{:>10}{:>10}{:>12}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}"""
 
             if (counter % 25 == 0):
@@ -160,18 +168,18 @@ class RocketStat:
                 print template.format(instance,
                                       zone,
                                       self.thetime(),
-                                      (queries-prior_queries)/self.sleep_interval,
-                                      (inserts-prior_inserts)/self.sleep_interval,
-                                      (updates-prior_updates)/self.sleep_interval,
-                                      (deletes-prior_deletes)/self.sleep_interval,
+                                      (queries-prior_queries)/request_time,
+                                      (inserts-prior_inserts)/request_time,
+                                      (updates-prior_updates)/request_time,
+                                      (deletes-prior_deletes)/request_time,
                                       connections,
-                                      diff_memory_misses/self.sleep_interval,
+                                      diff_memory_misses/request_time,
                                       lock_percent,
                                       "%s|%s" %(lock_readers,lock_writers),
                                       lock_active_total,
-                                      (index_accesses-prior_index_accesses)/self.sleep_interval,
-                                      (index_hits-prior_index_hits)/self.sleep_interval,
-                                      (index_misses-prior_index_misses)/self.sleep_interval,
+                                      (index_accesses-prior_index_accesses)/request_time,
+                                      (index_hits-prior_index_hits)/request_time,
+                                      (index_misses-prior_index_misses)/request_time,
                                       index_miss_percent)
 
             counter += 1
@@ -203,11 +211,17 @@ def main():
                         choices=(1, 5, 10, 15, 30, 60),
                         metavar='CHECKINTERVAL',
                         help='how often to poll for data')
+    parser.add_argument('-l',
+                        '--local-time',
+                        dest='local_time',
+                        default=False,
+                        action='store_true',
+                        help='compute stats using a local timestamp instead of sleep time')
 
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, lambda signum, frame: sys.exit())
-    rocketstat = RocketStat(args.api_key, args.api_server,args.check_interval)
+    rocketstat = RocketStat(args.api_key, args.api_server, args.check_interval, args.local_time)
     rocketstat.printStats()
 
 
